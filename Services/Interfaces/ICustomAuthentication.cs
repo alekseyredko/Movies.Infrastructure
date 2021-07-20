@@ -15,5 +15,6 @@ namespace Movies.Infrastructure.Services.Interfaces
         Task<Result<LoginUserResponse>> TryLoginAsync(LoginUserRequest request);
         Task<Result<RegisterUserResponse>> TryRegisterAsync(RegisterUserRequest request);
         Task<Result<User>> GetCurrentUserAsync();
+        Task LogoutAsync();
     }
 }

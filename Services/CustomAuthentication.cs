@@ -18,6 +18,8 @@ using Movies.Data.Services.Interfaces;
 using Movies.Infrastructure.Models;
 using Movies.Infrastructure.Services.Interfaces;
 using System.Text.Json;
+using System.IO;
+using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Movies.Infrastructure.Services
 {
@@ -109,10 +111,27 @@ namespace Movies.Infrastructure.Services
             var identity = new ClaimsIdentity(claims, "custom");
             var user = new ClaimsPrincipal(identity);
             authenticationHandlerProvider.SetAuthenticationState(Task.FromResult(new AuthenticationState(user)));
-           
+            
+            using (var stream = new MemoryStream())
+            {
+                using (var writer = new BinaryWriter(stream))
+                {
+                    user.WriteTo(writer);              
+                } 
 
-            var serialized = JsonSerializer.Serialize(roles);
-            await _localStorage.SetAsync("user", roles);                                 
+                await _localStorage.SetAsync("user", stream.ToArray());      
+            }
+
+        }
+
+        public async Task LogoutAsync()
+        {            
+            var localVar = await _localStorage.GetAsync<byte[]>("user");
+
+            await _localStorage.DeleteAsync("user");
+
+            var user = new ClaimsPrincipal();
+            authenticationHandlerProvider.SetAuthenticationState(Task.FromResult(new AuthenticationState(user)));
         }
     }
 }

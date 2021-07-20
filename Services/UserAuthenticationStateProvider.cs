@@ -14,6 +14,8 @@ using Movies.Infrastructure.Models;
 using Movies.Infrastructure.Services.Interfaces;
 using System.Text.Json;
 using Blazored.LocalStorage;
+using System.IO;
+using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Movies.Infrastructure.Services
 {
@@ -39,18 +41,23 @@ namespace Movies.Infrastructure.Services
 
         public override async Task<AuthenticationState> GetAuthenticationStateAsync()
         {         
-            var localStogareVar = await _localStorage.GetAsync<IEnumerable<UserRoles>>("user");
+            var localStogareVar = await _localStorage.GetAsync<byte[]>("user");
             var user = new ClaimsPrincipal();
             
             if (localStogareVar.Success)
             {
-                var roles = localStogareVar.Value;
-                var claims = new List<Claim>
+                var buffer = localStogareVar.Value;               
+
+                using (var stream = new MemoryStream(buffer))
                 {
-                    new (roles.First(x => x.))
-                };
+                    using (var reader = new BinaryReader(stream))
+                    {
+                        user = new ClaimsPrincipal(reader);
+                    }
+                }
+
             }
-           
+
             return new AuthenticationState(user);
         }
     }
