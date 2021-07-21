@@ -7,7 +7,6 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 using AutoMapper;
-using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
@@ -20,6 +19,8 @@ using Movies.Infrastructure.Services.Interfaces;
 using System.Text.Json;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
+using Movies.Infrastructure.Models.Producer;
+using Movies.Infrastructure.Models.User;
 
 namespace Movies.Infrastructure.Services
 {
@@ -28,16 +29,16 @@ namespace Movies.Infrastructure.Services
         private readonly ServerAuthenticationStateProvider authenticationHandlerProvider;
         private readonly IMapper _mapper;
         private readonly IUserService _userService;
+        private readonly IProducerService _producerService;
         private readonly ProtectedLocalStorage _localStorage;
-        private readonly ILocalStorageService _localStorageService;
 
-        public CustomAuthentication(ServerAuthenticationStateProvider authenticationHandlerProvider, IMapper mapper, IUserService userService, ProtectedLocalStorage localStorage, ILocalStorageService localStorageService)
+        public CustomAuthentication(ServerAuthenticationStateProvider authenticationHandlerProvider, IMapper mapper, IUserService userService, ProtectedLocalStorage localStorage, IProducerService producerService)
         {
             this.authenticationHandlerProvider = authenticationHandlerProvider;
             _mapper = mapper;
             _userService = userService;
-            _localStorage = localStorage;
-            _localStorageService = localStorageService;
+            _localStorage = localStorage;            
+            _producerService = producerService;
         }
 
         public async Task<Result<LoginUserResponse>> TryLoginAsync(LoginUserRequest request)
@@ -48,7 +49,7 @@ namespace Movies.Infrastructure.Services
 
             if (result.ResultType == ResultType.Ok)
             {
-                await SetAuthenticationStateAsync(result);
+                await SetAuthenticationStateAsync(result.Value.UserId);
             }
 
             return mappedResult;
@@ -62,13 +63,13 @@ namespace Movies.Infrastructure.Services
 
             if (result.ResultType == ResultType.Ok)
             {
-                await SetAuthenticationStateAsync(result);      
+                await SetAuthenticationStateAsync(result.Value.UserId);      
             }
 
             return mappedResult;
         }
 
-        public async Task<Result<User>> GetCurrentUserAsync()
+        protected async Task<Result<User>> GetCurrentUserAsync()
         {
             var user = new Result<User>
             {
@@ -98,10 +99,40 @@ namespace Movies.Infrastructure.Services
             return user;
         }
 
-        private async Task SetAuthenticationStateAsync(Result<User> result)
+        public async Task<Result<GetUserResponse>> GetCurrentUserDataAsync()
+        {
+            var user = new Result<User>
+            {
+                ResultType = ResultType.Unauthorized
+            };
+
+            var state = await authenticationHandlerProvider.GetAuthenticationStateAsync();
+
+            if (state.User != null)
+            {
+                var claim = state.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier);
+
+                if (claim != null)
+                {
+                    if (int.TryParse(claim.Value, out int id))
+                    {
+                        user = await _userService.GetUserAccountAsync(id);
+                        
+                    }
+                }
+                else
+                {
+                    user.ResultType = ResultType.Unauthorized;
+                }
+            }
+
+            return _mapper.Map<Result<User>, Result<GetUserResponse>>(user);
+        }
+
+        private async Task SetAuthenticationStateAsync(int id)
         {          
-            var roles = await _userService.GetUserRolesAsync(result.Value.UserId);                
-            var claims = new List<Claim> { new Claim(ClaimTypes.NameIdentifier, result.Value.UserId.ToString()) };
+            var roles = await _userService.GetUserRolesAsync(id);                
+            var claims = new List<Claim> { new Claim(ClaimTypes.NameIdentifier, id.ToString()) };
 
             foreach (var role in roles)
             {
@@ -125,13 +156,29 @@ namespace Movies.Infrastructure.Services
         }
 
         public async Task LogoutAsync()
-        {            
-            var localVar = await _localStorage.GetAsync<byte[]>("user");
-
+        {                      
             await _localStorage.DeleteAsync("user");
 
             var user = new ClaimsPrincipal();
             authenticationHandlerProvider.SetAuthenticationState(Task.FromResult(new AuthenticationState(user)));
+        }
+
+        public async Task<Result<ProducerResponse>> TryRegisterAsProducerAsync(ProducerRequest request)
+        {
+            var currentUser = await GetCurrentUserAsync();            
+
+            var producer = _mapper.Map<ProducerRequest, Producer>(request);
+            producer.ProducerId = currentUser.Value.UserId;
+
+            var result = await _producerService.AddProducerAsync(producer);
+            var response = _mapper.Map<Result<Producer>, Result<ProducerResponse>>(result);
+
+            if (result.ResultType == ResultType.Ok)
+            {
+                await SetAuthenticationStateAsync(result.Value.ProducerId);
+            }
+
+            return response;
         }
     }
 }

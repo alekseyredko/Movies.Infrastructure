@@ -13,30 +13,17 @@ using Movies.Data.Services.Interfaces;
 using Movies.Infrastructure.Models;
 using Movies.Infrastructure.Services.Interfaces;
 using System.Text.Json;
-using Blazored.LocalStorage;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Movies.Infrastructure.Services
 {
     public class UserAuthenticationStateProvider : ServerAuthenticationStateProvider
-    {
-        private readonly IUserService _userService;
-        private readonly IProducerService _producerService;
-        private readonly IMapper _mapper;
-        private readonly ProtectedLocalStorage _localStorage;
-        private readonly ILocalStorageService _localStorageService;
-        public UserAuthenticationStateProvider(IUserService userService,
-            IMapper mapper,
-            IProducerService producerService,
-            ProtectedLocalStorage localStorage, 
-            ILocalStorageService localStorageService)
-        {
-            this._userService = userService;
-            _mapper = mapper;
-            _producerService = producerService;
-            _localStorage = localStorage;
-            _localStorageService = localStorageService;
+    {        
+        private readonly ProtectedLocalStorage _localStorage;        
+        public UserAuthenticationStateProvider(ProtectedLocalStorage localStorage)
+        {           
+            _localStorage = localStorage;        
         }
 
         public override async Task<AuthenticationState> GetAuthenticationStateAsync()
@@ -55,7 +42,6 @@ namespace Movies.Infrastructure.Services
                         user = new ClaimsPrincipal(reader);
                     }
                 }
-
             }
 
             return new AuthenticationState(user);
