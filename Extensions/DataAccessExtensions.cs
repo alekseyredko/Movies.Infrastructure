@@ -19,26 +19,36 @@ namespace Movies.Infrastructure.Extensions
     {
         public static void AddDataAccessServices(this IServiceCollection services)
         {
-            services.AddDbContext<MoviesDBContext>();
+            services.AddDbContext<MoviesDBContext>(optionsLifetime: ServiceLifetime.Transient);
+            AddServices(services);
+        }        
 
-            services.AddScoped<IActorRepository, ActorRepository>();
-            services.AddScoped<IGenreRepository, GenreRepository>();
-            services.AddScoped<IMovieRepository, MovieRepository>();
-            services.AddScoped<IPersonRepository, PersonRepository>();
-            services.AddScoped<IProducerRepository, ProducerRepository>();
-            services.AddScoped<IReviewRepository, ReviewRepository>();
-            services.AddScoped<IReviewerWatchHistoryRepository, ReviewerWatchHistoryRepository>();
-            services.AddScoped<IReviewerRepository, ReviewerRepositoty>();
-            services.AddScoped<IUserRepository, UserRepository>();
+        public static void AddDataAccessServicesForBlazor(this IServiceCollection services)
+        {           
+            services.AddDbContextFactory<MoviesDBContext>();
+            AddServices(services);
+        }
 
-            services.AddScoped<IUnitOfWork, UnitOfWork>();
+        private static void AddServices(IServiceCollection services)
+        {
+            services.AddTransient<IActorRepository, ActorRepository>();
+            services.AddTransient<IGenreRepository, GenreRepository>();
+            services.AddTransient<IMovieRepository, MovieRepository>();
+            services.AddTransient<IPersonRepository, PersonRepository>();
+            services.AddTransient<IProducerRepository, ProducerRepository>();
+            services.AddTransient<IReviewRepository, ReviewRepository>();
+            services.AddTransient<IReviewerWatchHistoryRepository, ReviewerWatchHistoryRepository>();
+            services.AddTransient<IReviewerRepository, ReviewerRepositoty>();
+            services.AddTransient<IUserRepository, UserRepository>();
 
-            services.AddScoped<IActorsService, ActorsService>();
-            services.AddScoped<IMovieService, MovieService>();
-            services.AddScoped<IPersonService, PersonService>();
-            services.AddScoped<IProducerService, ProducerService>();
-            services.AddScoped<IReviewService, ReviewService>();
-            services.AddScoped<IUserService, UserService>();
+            services.AddTransient<IUnitOfWork, UnitOfWork>();
+
+            services.AddTransient<IActorsService, ActorsService>();
+            services.AddTransient<IMovieService, MovieService>();
+            services.AddTransient<IPersonService, PersonService>();
+            services.AddTransient<IProducerService, ProducerService>();
+            services.AddTransient<IReviewService, ReviewService>();
+            services.AddTransient<IUserService, UserService>();
         }
     }
 }
