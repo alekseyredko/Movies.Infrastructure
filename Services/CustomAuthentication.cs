@@ -21,6 +21,7 @@ using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 using Movies.Infrastructure.Models.Producer;
 using Movies.Infrastructure.Models.User;
+using Movies.Infrastructure.Models.Reviewer;
 
 namespace Movies.Infrastructure.Services
 {
@@ -30,15 +31,22 @@ namespace Movies.Infrastructure.Services
         private readonly IMapper _mapper;
         private readonly IUserService _userService;
         private readonly IProducerService _producerService;
+        private readonly IReviewService _reviewService;
         private readonly ProtectedLocalStorage _localStorage;
 
-        public CustomAuthentication(ServerAuthenticationStateProvider authenticationHandlerProvider, IMapper mapper, IUserService userService, ProtectedLocalStorage localStorage, IProducerService producerService)
+        public CustomAuthentication(ServerAuthenticationStateProvider authenticationHandlerProvider, 
+            IMapper mapper, 
+            IUserService userService, 
+            ProtectedLocalStorage localStorage, 
+            IProducerService producerService, 
+            IReviewService reviewService)
         {
             this.authenticationHandlerProvider = authenticationHandlerProvider;
             _mapper = mapper;
             _userService = userService;
-            _localStorage = localStorage;            
+            _localStorage = localStorage;
             _producerService = producerService;
+            _reviewService = reviewService;
         }
 
         public async Task<Result<LoginUserResponse>> TryLoginAsync(LoginUserRequest request)
@@ -176,6 +184,24 @@ namespace Movies.Infrastructure.Services
             if (result.ResultType == ResultType.Ok)
             {
                 await SetAuthenticationStateAsync(result.Value.ProducerId);
+            }
+
+            return response;
+        }
+
+        public async Task<Result<RegisterReviewerResponse>> TryRegisterAsReviewerAsync(RegisterReviewerRequest request)
+        {
+            var currentUser = await GetCurrentUserAsync();
+
+            var reviewer = _mapper.Map<RegisterReviewerRequest, Reviewer>(request);
+            reviewer.ReviewerId = currentUser.Value.UserId;
+
+            var result = await _reviewService.AddReviewerAsync(reviewer);
+            var response = _mapper.Map<Result<Reviewer>, Result<RegisterReviewerResponse>>(result);
+
+            if (result.ResultType == ResultType.Ok)
+            {
+                await SetAuthenticationStateAsync(result.Value.ReviewerId);
             }
 
             return response;

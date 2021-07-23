@@ -8,6 +8,7 @@ using Movies.Data.Models;
 using Movies.Data.Results;
 using Movies.Infrastructure.Models;
 using Movies.Infrastructure.Models.Producer;
+using Movies.Infrastructure.Models.Reviewer;
 using Movies.Infrastructure.Models.User;
 
 namespace Movies.Infrastructure.Services.Interfaces
@@ -19,5 +20,6 @@ namespace Movies.Infrastructure.Services.Interfaces
         Task LogoutAsync();
         Task<Result<ProducerResponse>> TryRegisterAsProducerAsync(ProducerRequest request);
         Task<Result<GetUserResponse>> GetCurrentUserDataAsync();
+        Task<Result<RegisterReviewerResponse>> TryRegisterAsReviewerAsync(RegisterReviewerRequest request);
     }
 }
