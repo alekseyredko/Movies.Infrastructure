@@ -10,6 +10,7 @@ using Movies.Data.DataAccess.Interfaces;
 using Movies.Data.DataAccess.Repositiories;
 using Movies.Data.Models;
 using Movies.Data.Services;
+using Movies.Data.Services.Decorators;
 using Movies.Data.Services.Interfaces;
 using MoviesDataLayer;
 using MoviesDataLayer.Interfaces;
@@ -27,18 +28,14 @@ namespace Movies.Infrastructure.Extensions
         public static void AddDataAccessServicesForBlazor(this IServiceCollection services)
         {
             services.AddDbContextFactory<MoviesDBContext>();
-            //services.AddTransient<IUnitOfWork, UnitOfWork>(factory =>
-            //{
-            //    var context = factory.GetRequiredService<IDbContextFactory<MoviesDBContext>>().CreateDbContext();
-            //    return new UnitOfWork(context);
-            //});
+            //services.AddTransient<IUnitOfWork, UnitOfWork>();
 
-            services.AddTransient<IActorsService, ActorsService>();
-            services.AddTransient<IMovieService, MovieService>();
-            services.AddTransient<IPersonService, PersonService>();
-            services.AddTransient<IProducerService, ProducerService>();
-            services.AddTransient<IReviewService, ReviewService>();
-            services.AddTransient<IUserService, UserService>();
+            //services.AddTransient<IActorsService, ActorsService>();
+            services.AddTransient<IMovieService, MovieServiceDecorator>();
+            //services.AddTransient<IPersonService, PersonService>();
+            services.AddTransient<IProducerService, ProducerServiceDecorator>();
+            services.AddTransient<IReviewService, ReviewServiceDecorator>();
+            services.AddTransient<IUserService, UserSeviceDecorator>();
         }
 
         private static void AddServices(IServiceCollection services)
