@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Movies.Data.DataAccess;
 using Movies.Data.DataAccess.Interfaces;
@@ -24,9 +25,20 @@ namespace Movies.Infrastructure.Extensions
         }        
 
         public static void AddDataAccessServicesForBlazor(this IServiceCollection services)
-        {           
+        {
             services.AddDbContextFactory<MoviesDBContext>();
-            AddServices(services);
+            //services.AddTransient<IUnitOfWork, UnitOfWork>(factory =>
+            //{
+            //    var context = factory.GetRequiredService<IDbContextFactory<MoviesDBContext>>().CreateDbContext();
+            //    return new UnitOfWork(context);
+            //});
+
+            services.AddTransient<IActorsService, ActorsService>();
+            services.AddTransient<IMovieService, MovieService>();
+            services.AddTransient<IPersonService, PersonService>();
+            services.AddTransient<IProducerService, ProducerService>();
+            services.AddTransient<IReviewService, ReviewService>();
+            services.AddTransient<IUserService, UserService>();
         }
 
         private static void AddServices(IServiceCollection services)

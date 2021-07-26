@@ -21,7 +21,7 @@ namespace Movies.Infrastructure.Extensions
 
         public static void RegisterValidatorsAsServices(this IServiceCollection collection)
         {
-            collection.AddScoped<IValidator<User>, UserValidator>();
+            collection.AddTransient<IValidator<User>, UserValidator>();
         }
     }
 }
