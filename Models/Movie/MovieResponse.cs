@@ -11,5 +11,6 @@ namespace Movies.Infrastructure.Models.Movie
         public string MovieName { get; set; }
         public TimeSpan Duration { get; set; }
         public float? Rate { get; set; }
+        public int ProducerId { get; set; } 
     }
 }
