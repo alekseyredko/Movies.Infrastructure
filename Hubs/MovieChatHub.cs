@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.SignalR;
+﻿using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.SignalR;
 using Movies.Infrastructure.Models.Messages;
+using Movies.Infrastructure.Models.Reviewer;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,7 +22,6 @@ namespace Movies.Infrastructure.Hubs
             await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
         }
         
-
         public override Task OnConnectedAsync()
         {
             return base.OnConnectedAsync();

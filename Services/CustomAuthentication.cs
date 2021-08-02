@@ -22,19 +22,20 @@ using System.Runtime.Serialization.Formatters.Binary;
 using Movies.Infrastructure.Models.Producer;
 using Movies.Infrastructure.Models.User;
 using Movies.Infrastructure.Models.Reviewer;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Movies.Infrastructure.Services
 {
     public class CustomAuthentication: ICustomAuthentication
     {
-        private readonly ServerAuthenticationStateProvider authenticationHandlerProvider;
+        private readonly AuthenticationStateProvider authenticationHandlerProvider;
         private readonly IMapper _mapper;
         private readonly IUserService _userService;
         private readonly IProducerService _producerService;
         private readonly IReviewService _reviewService;
         private readonly ProtectedLocalStorage _localStorage;
 
-        public CustomAuthentication(ServerAuthenticationStateProvider authenticationHandlerProvider, 
+        public CustomAuthentication(AuthenticationStateProvider authenticationHandlerProvider, 
             IMapper mapper, 
             IUserService userService, 
             ProtectedLocalStorage localStorage, 
@@ -124,8 +125,7 @@ namespace Movies.Infrastructure.Services
                 {
                     if (int.TryParse(claim.Value, out int id))
                     {
-                        user = await _userService.GetUserAccountAsync(id);
-                        
+                        user = await _userService.GetUserAccountAsync(id);                        
                     }
                 }
                 else
@@ -137,7 +137,7 @@ namespace Movies.Infrastructure.Services
             return _mapper.Map<Result<User>, Result<GetUserResponse>>(user);
         }
 
-        private async Task SetAuthenticationStateAsync(int id)
+        private async Task SetAuthenticationStateAsync(int id, params Claim[] addClaims)
         {          
             var roles = await _userService.GetUserRolesAsync(id);                
             var claims = new List<Claim> { new Claim(ClaimTypes.NameIdentifier, id.ToString()) };
@@ -147,9 +147,19 @@ namespace Movies.Infrastructure.Services
                 claims.Add(new Claim(ClaimTypes.Role, Enum.GetName(role)));
             }
 
+            if (roles.Contains(UserRoles.Reviewer))
+            {
+                var reviewer = await _reviewService.GetReviewerAsync(id);
+                if (reviewer != null && reviewer.ResultType == ResultType.Ok)
+                {
+                    var nickClaim = new Claim("Nickname", reviewer.Value.NickName);
+                    claims.Add(nickClaim);
+                }
+            }
+
             var identity = new ClaimsIdentity(claims, "custom");
             var user = new ClaimsPrincipal(identity);
-            authenticationHandlerProvider.SetAuthenticationState(Task.FromResult(new AuthenticationState(user)));
+            //authenticationHandlerProvider.SetAuthenticationState(Task.FromResult(new AuthenticationState(user)));
             
             using (var stream = new MemoryStream())
             {
@@ -160,7 +170,6 @@ namespace Movies.Infrastructure.Services
 
                 await _localStorage.SetAsync("user", stream.ToArray());      
             }
-
         }
 
         public async Task LogoutAsync()
@@ -168,7 +177,7 @@ namespace Movies.Infrastructure.Services
             await _localStorage.DeleteAsync("user");
 
             var user = new ClaimsPrincipal();
-            authenticationHandlerProvider.SetAuthenticationState(Task.FromResult(new AuthenticationState(user)));
+            //authenticationHandlerProvider.SetAuthenticationState(Task.FromResult(new AuthenticationState(user)));
         }
 
         public async Task<Result<ProducerResponse>> TryRegisterAsProducerAsync(ProducerRequest request)
@@ -200,7 +209,7 @@ namespace Movies.Infrastructure.Services
             var response = _mapper.Map<Result<Reviewer>, Result<RegisterReviewerResponse>>(result);
 
             if (result.ResultType == ResultType.Ok)
-            {
+            {                
                 await SetAuthenticationStateAsync(result.Value.ReviewerId);
             }
 

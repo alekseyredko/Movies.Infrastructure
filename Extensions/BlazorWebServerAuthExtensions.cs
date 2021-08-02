@@ -15,11 +15,11 @@ namespace Movies.Infrastructure.Extensions
     {
         public static void AddBlazorWebServerAuth(this IServiceCollection services)
         {
-            services.AddScoped<ServerAuthenticationStateProvider, UserAuthenticationStateProvider>();
-            services.AddScoped<AuthenticationStateProvider>(provider =>
-                provider.GetRequiredService<ServerAuthenticationStateProvider>());
-
+            services.AddScoped<AuthenticationStateProvider, UserAuthenticationStateProvider>();
+            
             services.AddScoped<ICustomAuthentication, CustomAuthentication>();
+
+            services.AddAuthorizationCore();
         }
     }
 }

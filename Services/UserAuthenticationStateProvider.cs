@@ -18,7 +18,7 @@ using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Movies.Infrastructure.Services
 {
-    public class UserAuthenticationStateProvider : ServerAuthenticationStateProvider
+    public class UserAuthenticationStateProvider : AuthenticationStateProvider
     {        
         private readonly ProtectedLocalStorage _localStorage;        
         public UserAuthenticationStateProvider(ProtectedLocalStorage localStorage)
@@ -29,7 +29,9 @@ namespace Movies.Infrastructure.Services
         public override async Task<AuthenticationState> GetAuthenticationStateAsync()
         {         
             var localStogareVar = await _localStorage.GetAsync<byte[]>("user");
-            var user = new ClaimsPrincipal();
+
+            var identity = new ClaimsIdentity();
+            var user = new ClaimsPrincipal(identity);
             
             if (localStogareVar.Success)
             {

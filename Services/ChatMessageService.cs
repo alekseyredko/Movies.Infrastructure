@@ -48,7 +48,7 @@ namespace Movies.Infrastructure.Models.Messages
             return mapped;
         }
 
-        public ChatMessageResponse FindMessage(ICollection<ChatMessageResponse> messages, int id)
+        private ChatMessageResponse FindMessage(ICollection<ChatMessageResponse> messages, int id)
         {
             foreach (var message in messages)
             {
@@ -62,5 +62,7 @@ namespace Movies.Infrastructure.Models.Messages
             }
             return null;
         }
+
+
     }
 }
