@@ -10,7 +10,7 @@ namespace Movies.Infrastructure.Models.Messages
 {
     public class ChatMessageService
     {
-        private int insertMessageId;
+        private int insertMessageId = 1;
         public void AddMessage(List<ChatMessageResponse> messages, ChatMessageRequest chatMessageRequest)
         {
             if (!chatMessageRequest.ParentMessageId.HasValue)
@@ -31,6 +31,7 @@ namespace Movies.Infrastructure.Models.Messages
                 else
                 {
                     ChatMessageResponse mapped = CreateMessage(chatMessageRequest);
+                    mapped.ParentMessage = found;
                     found.Replies.Add(mapped);
                     return;
                 }
@@ -47,30 +48,17 @@ namespace Movies.Infrastructure.Models.Messages
             return mapped;
         }
 
-        public ChatMessageResponse FindMessage(List<ChatMessageResponse> messages, int id)
+        public ChatMessageResponse FindMessage(ICollection<ChatMessageResponse> messages, int id)
         {
             foreach (var message in messages)
             {
                 if (message.ChatMessageId != id)
                 {
-                    return FindMessage(message, id);
+                    var result = FindMessage(message.Replies, id);
+                    if (result != null) return result;
                 }
 
                 else return message;
-            }
-            return null;
-        }
-
-        public static ChatMessageResponse FindMessage(ChatMessageResponse message, int id)
-        {
-            foreach (var child in message.Replies)
-            {
-                if (child.ChatMessageId != id)
-                {
-                    return FindMessage(child, id);
-                }
-
-                else return child;
             }
             return null;
         }
