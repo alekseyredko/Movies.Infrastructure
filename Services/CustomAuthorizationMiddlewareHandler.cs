@@ -14,7 +14,6 @@ using Movies.Data.Services.Interfaces;
 namespace Movies.Infrastructure.Services
 {
     public class CustomAuthorizationMiddlewareHandler: IAuthorizationMiddlewareResultHandler
-
     {
         private readonly AuthorizationMiddlewareResultHandler
             DefaultHandler = new AuthorizationMiddlewareResultHandler();

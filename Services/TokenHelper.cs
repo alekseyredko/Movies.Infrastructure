@@ -4,6 +4,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Net.Http;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.IdentityModel.Tokens;
@@ -14,31 +15,7 @@ namespace Movies.Infrastructure.Services
 {
     public class TokenHelper
     {
-        public static string GenerateJWTAsync(User user, AuthConfiguration authConfiguration)
-        {
-            var securityKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(authConfiguration.Secret));
-
-            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
-
-            var claims = new List<Claim>()
-            {
-                new Claim(JwtRegisteredClaimNames.Sub, user.UserId.ToString()),
-            };
-
-            foreach (var userRole in user.Roles)
-            {
-                claims.Add(new Claim(ClaimTypes.Role, Enum.GetName(userRole)));
-            }
-
-            var token = new JwtSecurityToken(authConfiguration.Issuer, authConfiguration.Audience,
-                claims,
-                expires: DateTime.Now.AddMinutes(authConfiguration.TokenLifeTimeInMinutes),
-                signingCredentials: credentials);
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
-        }
-
-        public static string GenerateJWTAsync(int id, IEnumerable<UserRoles> roles, AuthConfiguration authConfiguration)
+        public static string GenerateJWTAsync(int id, AuthConfiguration authConfiguration, params UserRoles[] roles)
         {
             var securityKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(authConfiguration.Secret));
 
@@ -54,12 +31,29 @@ namespace Movies.Infrastructure.Services
                 claims.Add(new Claim(ClaimTypes.Role, Enum.GetName(userRole)));
             }
 
-            var token = new JwtSecurityToken(authConfiguration.Issuer, authConfiguration.Audience,
+            var token = new JwtSecurityToken(
+                authConfiguration.Issuer, 
+                authConfiguration.Audience,
                 claims,
                 expires: DateTime.Now.AddMinutes(authConfiguration.TokenLifeTimeInMinutes),
                 signingCredentials: credentials);
-
+            
             return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        public static RefreshToken GenerateRefreshToken()
+        {
+            using var rngCryptoServiceProvider = new RNGCryptoServiceProvider();
+            var randomBytes = new byte[64];
+            rngCryptoServiceProvider.GetBytes(randomBytes);
+            var refreshToken = new RefreshToken
+            {
+                Token = Convert.ToBase64String(randomBytes),
+                Expires = DateTime.UtcNow.AddDays(7),
+                Created = DateTime.UtcNow,
+            };
+
+            return refreshToken;
         }
 
         public static int GetIdFromToken(HttpContext context)
