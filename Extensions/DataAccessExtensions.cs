@@ -16,6 +16,7 @@ using Movies.Data.Services.Decorators;
 using Movies.Data.Services.Interfaces;
 using Movies.Infrastructure.Authentication;
 using Movies.Infrastructure.Services;
+using Movies.Infrastructure.Services.Interfaces;
 using MoviesDataLayer;
 using MoviesDataLayer.Interfaces;
 
@@ -51,14 +52,14 @@ namespace Movies.Infrastructure.Extensions
             services.AddTransient<IPersonService, PersonService>();
             services.AddTransient<IProducerService, ProducerService>();
             services.AddTransient<IReviewService, ReviewService>();
+            services.AddTransient<IUserService, UserService>();
 
-            services.AddTransient<IUserService, TokenUserService>(factory =>
+            services.AddTransient<ITokenUserService, TokenUserService>(factory =>
             {
                 var unitOfWork = factory.GetRequiredService<IUnitOfWork>();
                 var logger = factory.GetRequiredService<IValidator<User>>();
                 var config = factory.GetRequiredService<IOptions<AuthConfiguration>>();
-
-                var service = new UserService(unitOfWork, logger);
+                var service = factory.GetRequiredService<IUserService>();
 
                 return new TokenUserService(unitOfWork, logger, config, service);
             });    
