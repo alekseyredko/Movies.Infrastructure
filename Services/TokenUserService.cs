@@ -23,11 +23,13 @@ namespace Movies.Infrastructure.Services
     {
         private readonly IOptions<AuthConfiguration> authConfiguration;
         private readonly IUserService userService;
+        private readonly IUnitOfWork unitOfWork;
         public TokenUserService(IUnitOfWork unitOfWork,
                                 IValidator<User> userValidator,
                                 IOptions<AuthConfiguration> authConfiguration, 
                                 IUserService userService)
         {
+            this.unitOfWork = unitOfWork;
             this.authConfiguration = authConfiguration;
             this.userService = userService;
         }
@@ -39,7 +41,15 @@ namespace Movies.Infrastructure.Services
                 var roles = await userService.GetUserRolesAsync(result.Value.UserId);
                 result.Value.Token = GenerateJWTAsync(result.Value.UserId, authConfiguration.Value, roles.ToArray());
 
-                var refreshToken = GenerateRefreshToken();                               
+                var refreshToken = GenerateRefreshToken();
+                refreshToken.UserId = result.Value.UserId;
+
+                await unitOfWork.RefreshTokens.SetAllUserTokensRevoked(result.Value.UserId);
+                await unitOfWork.RefreshTokens.InsertAsync(refreshToken);
+                
+                await unitOfWork.SaveAsync();
+
+                result.Value.RefreshToken = refreshToken.Token;
             }
 
             return result;
@@ -53,29 +63,29 @@ namespace Movies.Infrastructure.Services
         }
 
 
-        public Task<Result<User>> RegisterAsync(User userRequest)
+        public async Task<Result<User>> RegisterAsync(User userRequest)
         {
-            throw new NotImplementedException();
+            return await userService.RegisterAsync(userRequest);
         }
 
-        public Task<Result<User>> UpdateAccountAsync(User request)
+        public async Task<Result<User>> UpdateAccountAsync(User request)
         {
-            throw new NotImplementedException();
+            return await userService.UpdateAccountAsync(request);
         }
 
-        public Task<Result> DeleteAccountAsync(int id)
+        public async Task<Result> DeleteAccountAsync(int id)
         {
-            throw new NotImplementedException();
+            return await userService.DeleteAccountAsync(id);
         }
 
-        public Task<IEnumerable<UserRoles>> GetUserRolesAsync(int id)
+        public async Task<IEnumerable<UserRoles>> GetUserRolesAsync(int id)
         {
-            throw new NotImplementedException();
+            return await userService.GetUserRolesAsync(id);
         }
 
-        public Task<Result<User>> GetUserAccountAsync(int id)
+        public async Task<Result<User>> GetUserAccountAsync(int id)
         {
-            throw new NotImplementedException();
+            return await userService.GetUserAccountAsync(id);
         }
 
         public string GenerateJWTAsync(int id, AuthConfiguration authConfiguration, IEnumerable<UserRoles> roles)
@@ -107,7 +117,7 @@ namespace Movies.Infrastructure.Services
         public RefreshToken GenerateRefreshToken()
         {
             using var rngCryptoServiceProvider = new RNGCryptoServiceProvider();
-            var randomBytes = new byte[64];
+            var randomBytes = new byte[32];
             rngCryptoServiceProvider.GetBytes(randomBytes);
             var refreshToken = new RefreshToken
             {
