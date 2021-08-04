@@ -8,6 +8,7 @@ using Movies.Data.Results;
 using Movies.Data.Services;
 using Movies.Data.Services.Interfaces;
 using Movies.Infrastructure.Authentication;
+using Movies.Infrastructure.Services.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
@@ -19,7 +20,7 @@ using System.Threading.Tasks;
 
 namespace Movies.Infrastructure.Services
 {
-    public class TokenUserService: IUserService
+    public class TokenUserService: ITokenUserService
     {
         private readonly IOptions<AuthConfiguration> authConfiguration;
         private readonly IUserService userService;
@@ -32,51 +33,75 @@ namespace Movies.Infrastructure.Services
             this.unitOfWork = unitOfWork;
             this.authConfiguration = authConfiguration;
             this.userService = userService;
-        }
+        }        
 
-        protected async Task<Result<User>> LoginAsync(User request, Result<User> result)
-        {           
+        public async Task<Result<User>> LoginAsync(User userRequest)
+        {
+            var result = await userService.LoginAsync(userRequest);
             if (result.ResultType == ResultType.Ok)
             {
-                var roles = await userService.GetUserRolesAsync(result.Value.UserId);
-                result.Value.Token = GenerateJWTAsync(result.Value.UserId, authConfiguration.Value, roles.ToArray());
+                await ResultHandler.TryExecuteAsync(result, GenerateTokenPair(userRequest, result));
+            }
+            return result;
+        }
 
-                var refreshToken = GenerateRefreshToken();
-                refreshToken.UserId = result.Value.UserId;
+        protected async Task<Result<User>> GenerateTokenPair(User request, Result<User> result)
+        {
+            var roles = await userService.GetUserRolesAsync(result.Value.UserId);
 
-                await unitOfWork.RefreshTokens.SetAllUserTokensRevoked(result.Value.UserId);
-                await unitOfWork.RefreshTokens.InsertAsync(refreshToken);
-                
-                await unitOfWork.SaveAsync();
+            var refreshToken = GenerateRefreshToken();
+            refreshToken.UserId = result.Value.UserId;
 
-                result.Value.RefreshToken = refreshToken.Token;
+            await unitOfWork.RefreshTokens.SetAllUserTokensRevoked(result.Value.UserId);
+            await unitOfWork.RefreshTokens.InsertAsync(refreshToken);
+
+            await unitOfWork.SaveAsync();
+
+            result.Value.Token = GenerateJWTAsync(result.Value.UserId, authConfiguration.Value, roles.ToArray());
+            result.Value.RefreshToken = refreshToken.Token;
+
+            return result;
+        }
+
+        public async Task<Result<User>> RegisterAsync(User userRequest)
+        {
+            var result = await userService.RegisterAsync(userRequest);
+            if (result.ResultType == ResultType.Ok)
+            {
+                await ResultHandler.TryExecuteAsync(result, RegisterAsync(userRequest, result));
             }
 
             return result;
         }
 
-        public async Task<Result<User>> LoginAsync(User userRequest)
+        protected async Task<Result<User>> RegisterAsync(User userRequest, Result<User> result)
         {
-            var result = await userService.LoginAsync(userRequest);
-            await ResultHandler.TryExecuteAsync(result, LoginAsync(userRequest, result));
+            var refreshToken = GenerateRefreshToken();
+            refreshToken.UserId = result.Value.UserId;
+
+            await unitOfWork.RefreshTokens.InsertAsync(refreshToken);
+            await unitOfWork.SaveAsync();
+
+            result.Value.Token = GenerateJWTAsync(result.Value.UserId, authConfiguration.Value);
+            result.Value.RefreshToken = refreshToken.Token;
+
             return result;
-        }
-
-
-        public async Task<Result<User>> RegisterAsync(User userRequest)
-        {
-            return await userService.RegisterAsync(userRequest);
         }
 
         public async Task<Result<User>> UpdateAccountAsync(User request)
         {
-            return await userService.UpdateAccountAsync(request);
+            var result = await userService.UpdateAccountAsync(request);
+            if (result.ResultType == ResultType.Ok)
+            {
+                await ResultHandler.TryExecuteAsync(result, GenerateTokenPair(request, result));
+            }
+            return result;
         }
 
         public async Task<Result> DeleteAccountAsync(int id)
         {
-            return await userService.DeleteAccountAsync(id);
-        }
+            return await userService.DeleteAccountAsync(id);            
+        }       
 
         public async Task<IEnumerable<UserRoles>> GetUserRolesAsync(int id)
         {
@@ -88,7 +113,53 @@ namespace Movies.Infrastructure.Services
             return await userService.GetUserAccountAsync(id);
         }
 
-        public string GenerateJWTAsync(int id, AuthConfiguration authConfiguration, IEnumerable<UserRoles> roles)
+        public async Task<Result<User>> RefreshTokenAsync(string token)
+        {
+            var result = new Result<User>();
+            await ResultHandler.TryExecuteAsync(result, RefreshTokenAsync(token, result));
+            return result;
+        }
+
+        protected async Task<Result<User>> RefreshTokenAsync(string request, Result<User> result)
+        {
+            var getToken = await unitOfWork.RefreshTokens.GetRefreshTokenByTokenValue(request);            
+            if (getToken == null || getToken.IsRevoked || getToken.IsExpired)
+            {
+                ResultHandler.SetForbidden("RefreshToken", result);
+                return result;
+            }
+            
+            if (getToken.Expires <= DateTime.UtcNow)
+            {
+                getToken.IsExpired = true;
+                unitOfWork.RefreshTokens.Update(getToken);
+                await unitOfWork.SaveAsync();
+
+                ResultHandler.SetForbidden("RefreshToken", result);
+                return result;
+            }
+            
+            var user = await unitOfWork.RefreshTokens.GetUserByRefreshToken(getToken.RefreshTokenId);
+            if (user == null)
+            {
+                getToken.IsRevoked = true;
+                unitOfWork.RefreshTokens.Update(getToken);
+                await unitOfWork.SaveAsync();
+
+                ResultHandler.SetAccountNotFound(nameof(user.UserId), result);
+                return result;
+            }
+
+            result.Value = user;  
+            
+            await GenerateTokenPair(user, result);
+
+            ResultHandler.SetOk(result);
+
+            return result;
+        }
+
+        public string GenerateJWTAsync(int id, AuthConfiguration authConfiguration, IEnumerable<UserRoles> roles = null)
         {
             var securityKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(authConfiguration.Secret));
 
@@ -99,9 +170,12 @@ namespace Movies.Infrastructure.Services
                 new Claim(JwtRegisteredClaimNames.Sub, id.ToString()),
             };
 
-            foreach (var userRole in roles)
+            if (roles != null)
             {
-                claims.Add(new Claim(ClaimTypes.Role, Enum.GetName(userRole)));
+                foreach (var userRole in roles)
+                {
+                    claims.Add(new Claim(ClaimTypes.Role, Enum.GetName(userRole)));
+                }
             }
 
             var token = new JwtSecurityToken(
