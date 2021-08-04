@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Movies.Data.DataAccess;
 using Movies.Data.DataAccess.Interfaces;
 using Movies.Data.DataAccess.Repositiories;
@@ -12,6 +14,8 @@ using Movies.Data.Models;
 using Movies.Data.Services;
 using Movies.Data.Services.Decorators;
 using Movies.Data.Services.Interfaces;
+using Movies.Infrastructure.Authentication;
+using Movies.Infrastructure.Services;
 using MoviesDataLayer;
 using MoviesDataLayer.Interfaces;
 
@@ -39,17 +43,7 @@ namespace Movies.Infrastructure.Extensions
         }
 
         private static void AddServices(IServiceCollection services)
-        {
-            services.AddTransient<IActorRepository, ActorRepository>();
-            services.AddTransient<IGenreRepository, GenreRepository>();
-            services.AddTransient<IMovieRepository, MovieRepository>();
-            services.AddTransient<IPersonRepository, PersonRepository>();
-            services.AddTransient<IProducerRepository, ProducerRepository>();
-            services.AddTransient<IReviewRepository, ReviewRepository>();
-            services.AddTransient<IReviewerWatchHistoryRepository, ReviewerWatchHistoryRepository>();
-            services.AddTransient<IReviewerRepository, ReviewerRepositoty>();
-            services.AddTransient<IUserRepository, UserRepository>();
-
+        {            
             services.AddTransient<IUnitOfWork, UnitOfWork>();
 
             services.AddTransient<IActorsService, ActorsService>();
@@ -57,7 +51,17 @@ namespace Movies.Infrastructure.Extensions
             services.AddTransient<IPersonService, PersonService>();
             services.AddTransient<IProducerService, ProducerService>();
             services.AddTransient<IReviewService, ReviewService>();
-            services.AddTransient<IUserService, UserService>();
+
+            services.AddTransient<IUserService, TokenUserService>(factory =>
+            {
+                var unitOfWork = factory.GetRequiredService<IUnitOfWork>();
+                var logger = factory.GetRequiredService<IValidator<User>>();
+                var config = factory.GetRequiredService<IOptions<AuthConfiguration>>();
+
+                var service = new UserService(unitOfWork, logger);
+
+                return new TokenUserService(unitOfWork, logger, config, service);
+            });    
         }
     }
 }
