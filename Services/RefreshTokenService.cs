@@ -4,7 +4,6 @@ using Microsoft.IdentityModel.Tokens;
 using Movies.Data.DataAccess.Interfaces;
 using Movies.Data.Models;
 using Movies.Data.Results;
-using Movies.Data.Services.Interfaces;
 using Movies.Infrastructure.Authentication;
 using Movies.Infrastructure.Models;
 using Movies.Infrastructure.Services.Interfaces;
@@ -22,15 +21,12 @@ namespace Movies.Infrastructure.Services
     public class RefreshTokenService : IRefreshTokenService
     {
         private readonly IUnitOfWork unitOfWork;
-        private readonly IUserService userService;
         private readonly IOptions<AuthConfiguration> authConfiguration;
 
         public RefreshTokenService(IUnitOfWork unitOfWork, 
-                                   IUserService userService, 
                                    IOptions<AuthConfiguration> authConfiguration)
         {
             this.unitOfWork = unitOfWork;
-            this.userService = userService;
             this.authConfiguration = authConfiguration;
         }        
 
@@ -82,8 +78,31 @@ namespace Movies.Infrastructure.Services
         }
 
         protected async Task<Result<TokenResponse>> GenerateTokenPair(int id, Result<TokenResponse> result)
-        {
-            var roles = await userService.GetUserRolesAsync(id);
+        {                       
+            var getPerson = await unitOfWork.Persons.GetFullPersonAsync(id);
+
+            if (getPerson == null)
+            {
+                ResultHandler.SetAccountNotFound("PersonId", result);
+                return result;            
+            }
+
+            var roles = new List<UserRoles>();
+
+            foreach (var property in typeof(Person).GetProperties().Where(x => x.GetGetMethod().IsVirtual))
+            {                
+                if (property.GetValue(getPerson) != null)
+                {
+                    if (property.Name == "User")
+                    {
+                        roles.Add(UserRoles.Person);
+                    }
+                    else
+                    {
+                        roles.Add(Enum.Parse<UserRoles>(property.Name));
+                    }
+                }               
+            }            
 
             var refreshToken = GenerateRefreshToken();
             refreshToken.UserId = id;
