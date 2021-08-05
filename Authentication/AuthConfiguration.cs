@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 
 namespace Movies.Infrastructure.Authentication
 {
+    //TODO: store refresh token data
     public class AuthConfiguration
     {
         public string Issuer { get; set; }

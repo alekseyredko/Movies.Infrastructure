@@ -7,6 +7,6 @@ namespace Movies.Infrastructure.Models.Reviewer
 {
     public class RegisterReviewerResponse: ReviewerResponse
     {
-        public string Token { get; set; }
+        public string Token { get; set; }        
     }
 }

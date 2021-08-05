@@ -51,18 +51,21 @@ namespace Movies.Infrastructure.Extensions
             services.AddTransient<IMovieService, MovieService>();
             services.AddTransient<IPersonService, PersonService>();
             services.AddTransient<IProducerService, ProducerService>();
-            services.AddTransient<IReviewService, ReviewService>();
+            services.AddTransient<IReviewService, ReviewService>();            
+            services.AddTransient<IRefreshTokenService, RefreshTokenService>();
             services.AddTransient<IUserService, UserService>();
+            
+            //services.AddTransient<IUserService, TokenUserService>(factory =>
+            //{
+            //    var unitOfWork = factory.GetRequiredService<IUnitOfWork>();
+            //    var logger = factory.GetRequiredService<IValidator<User>>();
+            //    var config = factory.GetRequiredService<IOptions<AuthConfiguration>>();
+            //    var validator = factory.GetRequiredService<IValidator<User>>();
+            //    var service = new UserService(unitOfWork, validator);
+            //    var tokenService = factory.GetRequiredService<IRefreshTokenService>();
 
-            services.AddTransient<ITokenUserService, TokenUserService>(factory =>
-            {
-                var unitOfWork = factory.GetRequiredService<IUnitOfWork>();
-                var logger = factory.GetRequiredService<IValidator<User>>();
-                var config = factory.GetRequiredService<IOptions<AuthConfiguration>>();
-                var service = factory.GetRequiredService<IUserService>();
-
-                return new TokenUserService(unitOfWork, logger, config, service);
-            });    
+            //    return new TokenUserService(unitOfWork, config, service, tokenService);
+            //});    
         }
     }
 }

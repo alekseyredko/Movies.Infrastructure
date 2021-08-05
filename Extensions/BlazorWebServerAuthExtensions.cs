@@ -21,5 +21,5 @@ namespace Movies.Infrastructure.Extensions
 
             services.AddAuthorizationCore();
         }
-    }
+    }       
 }

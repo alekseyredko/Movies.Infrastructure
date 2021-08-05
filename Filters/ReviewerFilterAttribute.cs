@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Movies.Infrastructure.Services;
@@ -16,7 +13,7 @@ namespace Movies.Infrastructure.Filters
             if (context.ActionArguments["reviewer"] is Reviewer)
             {
                 var reviewer = context.ActionArguments["reviewer"] as Reviewer;
-                reviewer.ReviewerId = TokenHelper.GetIdFromToken(context.HttpContext);
+                reviewer.ReviewerId = RefreshTokenService.GetIdFromToken(context.HttpContext);
             }
 
             await next();

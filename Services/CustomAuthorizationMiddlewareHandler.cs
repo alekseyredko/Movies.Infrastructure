@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Security.Claims;
@@ -7,7 +6,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
 using Microsoft.AspNetCore.Http;
-using Movies.Infrastructure.Services;
 using Movies.Data.Models;
 using Movies.Data.Services.Interfaces;
 
@@ -37,7 +35,7 @@ namespace Movies.Infrastructure.Services
                 return;
             }
 
-            var id = TokenHelper.GetIdFromToken(httpContext);
+            var id = RefreshTokenService.GetIdFromToken(httpContext);
             var roles = await _userService.GetUserRolesAsync(id);
 
             var claims = httpContext.User.Claims.Where(x => x.Type == ClaimTypes.Role);
