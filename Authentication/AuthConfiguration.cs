@@ -12,5 +12,6 @@ namespace Movies.Infrastructure.Authentication
         public string Audience { get; set; }
         public string Secret { get; set; }
         public int TokenLifeTimeInMinutes { get; set; }
+        public int RefreshTokenLifetimeInMinutes { get; set; }
     }
 }
