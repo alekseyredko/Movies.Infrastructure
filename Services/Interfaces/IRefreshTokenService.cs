@@ -11,7 +11,7 @@ namespace Movies.Infrastructure.Services.Interfaces
     public interface IRefreshTokenService
     {
         string GenerateJWTAsync(int id, AuthConfiguration authConfiguration, IEnumerable<UserRoles> roles = null);
-        RefreshToken GenerateRefreshToken();
+        RefreshToken GenerateRefreshToken(AuthConfiguration authConfiguration);
         Task<Result<TokenResponse>> GenerateTokenPairAsync(int id);
         Task<Result<TokenResponse>> RefreshTokenAsync(string token);
     }

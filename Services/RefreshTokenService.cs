@@ -104,7 +104,7 @@ namespace Movies.Infrastructure.Services
                 }               
             }            
 
-            var refreshToken = GenerateRefreshToken();
+            var refreshToken = GenerateRefreshToken(authConfiguration.Value);
             refreshToken.UserId = id;
 
             await unitOfWork.RefreshTokens.SetAllUserTokensRevoked(id);
@@ -114,7 +114,7 @@ namespace Movies.Infrastructure.Services
 
             result.Value = new TokenResponse();
 
-            result.Value.Token = GenerateJWTAsync(id, roles.ToArray());
+            result.Value.Token = GenerateJWTAsync(id, authConfiguration.Value, roles.ToArray());
             result.Value.RefreshToken = refreshToken.Token;
 
             ResultHandler.SetOk(result);
@@ -122,9 +122,9 @@ namespace Movies.Infrastructure.Services
             return result;
         }
 
-        public string GenerateJWTAsync(int id, IEnumerable<UserRoles> roles = null)
+        public string GenerateJWTAsync(int id, AuthConfiguration authConfiguration, IEnumerable<UserRoles> roles = null)
         {
-            var securityKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(authConfiguration.Value.Secret));
+            var securityKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(authConfiguration.Secret));
 
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
@@ -142,16 +142,16 @@ namespace Movies.Infrastructure.Services
             }
 
             var token = new JwtSecurityToken(
-                authConfiguration.Value.Issuer,
-                authConfiguration.Value.Audience,
+                authConfiguration.Issuer,
+                authConfiguration.Audience,
                 claims,
-                expires: DateTime.Now.AddMinutes(authConfiguration.Value.TokenLifeTimeInMinutes),
+                expires: DateTime.Now.AddMinutes(authConfiguration.TokenLifeTimeInMinutes),
                 signingCredentials: credentials);
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        public RefreshToken GenerateRefreshToken()
+        public RefreshToken GenerateRefreshToken(AuthConfiguration authConfiguration)
         {
             using var rngCryptoServiceProvider = new RNGCryptoServiceProvider();
             var randomBytes = new byte[32];
@@ -159,7 +159,7 @@ namespace Movies.Infrastructure.Services
             var refreshToken = new RefreshToken
             {
                 Token = Convert.ToBase64String(randomBytes),
-                Expires = DateTime.UtcNow.AddMinutes(authConfiguration.Value.RefreshTokenLifetimeInMinutes),
+                Expires = DateTime.UtcNow.AddMinutes(authConfiguration.RefreshTokenLifetimeInMinutes),
                 Created = DateTime.UtcNow,
             };
 
