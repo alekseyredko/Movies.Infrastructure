@@ -54,7 +54,7 @@ namespace Movies.Infrastructure.Extensions
             services.AddTransient<IReviewService, ReviewService>();            
             services.AddTransient<IRefreshTokenService, RefreshTokenService>();
             services.AddTransient<IUserService, UserService>();
-            
+
             //services.AddTransient<IUserService, TokenUserService>(factory =>
             //{
             //    var unitOfWork = factory.GetRequiredService<IUnitOfWork>();
@@ -65,7 +65,7 @@ namespace Movies.Infrastructure.Extensions
             //    var tokenService = factory.GetRequiredService<IRefreshTokenService>();
 
             //    return new TokenUserService(unitOfWork, config, service, tokenService);
-            //});    
+            //});
         }
     }
 }
