@@ -57,7 +57,7 @@ namespace Movies.Infrastructure.Services
 
         protected async Task<Result<User>> RegisterAsync(User userRequest, Result<User> result)
         {
-            var refreshToken = refreshTokenService.GenerateRefreshToken();
+            var refreshToken = refreshTokenService.GenerateRefreshToken(authConfiguration.Value);
             refreshToken.UserId = result.Value.UserId;
 
             await unitOfWork.RefreshTokens.InsertAsync(refreshToken);
