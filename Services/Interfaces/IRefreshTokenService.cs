@@ -10,6 +10,8 @@ namespace Movies.Infrastructure.Services.Interfaces
 {
     public interface IRefreshTokenService
     {
+        Task<Result> DeleteCookiesFromClient(HttpResponse response);
+        Task<Result> GenerateAndWriteTokensToResponseAsync(int id, HttpResponse response);
         string GenerateJWTAsync(int id, AuthConfiguration authConfiguration, IEnumerable<UserRoles> roles = null);
         RefreshToken GenerateRefreshToken(AuthConfiguration authConfiguration);
         Task<Result<TokenResponse>> GenerateTokenPairAsync(int id);

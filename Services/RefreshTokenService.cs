@@ -21,13 +21,13 @@ namespace Movies.Infrastructure.Services
     public class RefreshTokenService : IRefreshTokenService
     {
         private readonly IUnitOfWork unitOfWork;
-        private readonly IOptions<AuthConfiguration> authConfiguration;
+        private readonly AuthConfiguration authConfiguration;
 
         public RefreshTokenService(IUnitOfWork unitOfWork, 
                                    IOptions<AuthConfiguration> authConfiguration)
         {
             this.unitOfWork = unitOfWork;
-            this.authConfiguration = authConfiguration;
+            this.authConfiguration = authConfiguration.Value;
         }        
 
         public async Task<Result<TokenResponse>> RefreshTokenAsync(string token)
@@ -70,6 +70,61 @@ namespace Movies.Infrastructure.Services
             return await GenerateTokenPairAsync(user.UserId);            
         }
 
+        public async Task<Result> DeleteCookiesFromClient(HttpResponse response)
+        {
+            var result = new Result();
+            await ResultHandler.TryExecuteAsync(result, DeleteCookiesFromClient(response, result));
+            return result;
+        }
+
+        protected async Task<Result> DeleteCookiesFromClient(HttpResponse response, Result result)
+        {
+            return await Task.Run(() =>
+            {
+                response.Cookies.Delete("Refresh");
+                response.Cookies.Delete("Token");
+
+                ResultHandler.SetOk(result);
+
+                return result;
+            });
+        }
+
+        public async Task<Result> GenerateAndWriteTokensToResponseAsync(int id, HttpResponse response)
+        {
+            var result = await GenerateTokenPairAsync(id);
+
+            if (result.ResultType == ResultType.Ok)
+            {
+                await ResultHandler.TryExecuteAsync(result, WriteTokensToResponseAsync(response, result));
+            }
+
+            return result;
+        }
+
+        protected async Task<Result> WriteTokensToResponseAsync(HttpResponse response, Result<TokenResponse> result)
+        {            
+            return await Task.Run(() =>
+            {
+                var refreshCookieOptions = new CookieOptions
+                {
+                    HttpOnly = true,
+                    Expires = DateTime.UtcNow.AddMinutes(authConfiguration.RefreshTokenLifetimeInMinutes)
+                };
+
+                var сookieOptions = new CookieOptions
+                {
+                    HttpOnly = true,
+                    Expires = DateTime.UtcNow.AddMinutes(authConfiguration.RefreshTokenLifetimeInMinutes)
+                };
+
+                response.Cookies.Append("Refresh", result.Value.RefreshToken, refreshCookieOptions);
+                response.Cookies.Append("Token", result.Value.Token, сookieOptions);
+                
+                return result;
+            });
+        }
+
         public async Task<Result<TokenResponse>> GenerateTokenPairAsync(int id)
         {
             var result = new Result<TokenResponse>();
@@ -104,7 +159,7 @@ namespace Movies.Infrastructure.Services
                 }               
             }            
 
-            var refreshToken = GenerateRefreshToken(authConfiguration.Value);
+            var refreshToken = GenerateRefreshToken(authConfiguration);
             refreshToken.UserId = id;
 
             await unitOfWork.RefreshTokens.SetAllUserTokensRevoked(id);
@@ -114,7 +169,7 @@ namespace Movies.Infrastructure.Services
 
             result.Value = new TokenResponse();
 
-            result.Value.Token = GenerateJWTAsync(id, authConfiguration.Value, roles.ToArray());
+            result.Value.Token = GenerateJWTAsync(id, authConfiguration, roles.ToArray());
             result.Value.RefreshToken = refreshToken.Token;
 
             ResultHandler.SetOk(result);
